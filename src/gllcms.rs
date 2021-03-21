@@ -10,6 +10,7 @@ use gst_gl::*;
 
 use lcms2::*;
 use once_cell::sync::Lazy;
+use std::convert::TryInto;
 use std::sync::Mutex;
 
 // Default vertex shader from gst_gl_shader_string_vertex_default
@@ -432,7 +433,9 @@ impl GLFilterImpl for GlLcms {
                 // BufferStorage to keep the buffer mutable, in contrast to BufferStorage
                 gl.BufferStorage(
                     gl::SHADER_STORAGE_BUFFER,
-                    (source_pixels.len() * std::mem::size_of::<u32>()) as gl::types::GLsizeiptr,
+                    (source_pixels.len() * std::mem::size_of::<u32>())
+                        .try_into()
+                        .unwrap(),
                     source_pixels.as_ptr().cast(),
                     0,
                 )
