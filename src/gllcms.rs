@@ -1,7 +1,6 @@
+use gst::glib;
 use gst::subclass::ElementMetadata;
 use gst_base::subclass::BaseTransformMode;
-use gst_gl::gst::glib;
-use gst_gl::gst::subclass::prelude::*;
 use gst_gl::gst_base::subclass::prelude::*;
 use gst_gl::prelude::*;
 use gst_gl::subclass::prelude::*;
@@ -90,14 +89,14 @@ pub struct GlLcms {
 
 static PROPERTIES: Lazy<[glib::ParamSpec; 5]> = Lazy::new(|| {
     [
-        glib::ParamSpec::string(
+        glib::ParamSpec::new_string(
             "icc",
             "ICC Profile",
             "Path to ICC color profile",
             None,
             glib::ParamFlags::READWRITE,
         ),
-        glib::ParamSpec::double(
+        glib::ParamSpec::new_double(
             "brightness",
             "Bright",
             "Extra brightness correction",
@@ -107,7 +106,7 @@ static PROPERTIES: Lazy<[glib::ParamSpec; 5]> = Lazy::new(|| {
             DEFAULT_BRIGHTNESS,
             glib::ParamFlags::READWRITE,
         ),
-        glib::ParamSpec::double(
+        glib::ParamSpec::new_double(
             "contrast",
             "Contrast",
             "Extra contrast correction",
@@ -117,7 +116,7 @@ static PROPERTIES: Lazy<[glib::ParamSpec; 5]> = Lazy::new(|| {
             DEFAULT_CONTRAST,
             glib::ParamFlags::READWRITE,
         ),
-        glib::ParamSpec::double(
+        glib::ParamSpec::new_double(
             "hue",
             "Hue",
             "Extra hue displacement in degrees",
@@ -126,7 +125,7 @@ static PROPERTIES: Lazy<[glib::ParamSpec; 5]> = Lazy::new(|| {
             DEFAULT_HUE,
             glib::ParamFlags::READWRITE,
         ),
-        glib::ParamSpec::double(
+        glib::ParamSpec::new_double(
             "saturation",
             "Saturation",
             "Extra saturation correction",
@@ -137,11 +136,11 @@ static PROPERTIES: Lazy<[glib::ParamSpec; 5]> = Lazy::new(|| {
             glib::ParamFlags::READWRITE,
         ),
         // TODO: Model white balance src+dest as structure
-        // glib::ParamSpec::value_array(
+        // glib::ParamSpec::new_value_array(
         //     "temp",
         //     "Source temperature",
         //     "Source white point temperature",
-        //     &glib::ParamSpec::uint(
+        //     &glib::ParamSpec::new_uint(
         //         "the temperature",
         //         "Source temperature",
         //         "Source white point temperature",
@@ -189,7 +188,7 @@ impl ObjectImpl for GlLcms {
 
         let mut settings = self.settings.lock().unwrap();
 
-        match pspec.get_name() {
+        match pspec.name() {
             "icc" => settings.icc = value.get().expect("Type mismatch"),
             "brightness" => settings.brightness = value.get_some().expect("Type mismatch"),
             "contrast" => settings.contrast = value.get_some().expect("Type mismatch"),
@@ -211,7 +210,7 @@ impl ObjectImpl for GlLcms {
     ) -> glib::Value {
         let settings = self.settings.lock().unwrap();
 
-        match pspec.get_name() {
+        match pspec.name() {
             "icc" => settings.icc.to_value(),
             "brightness" => settings.brightness.to_value(),
             "contrast" => settings.contrast.to_value(),
@@ -316,8 +315,13 @@ fn create_ssbo(gl: &gl::Gl) -> u32 {
 impl GLFilterImpl for GlLcms {
     const MODE: GLFilterMode = GLFilterMode::Texture;
 
-    fn filter_texture(&self, filter: &Self::Type, input: &GLMemory, output: &mut GLMemory) -> bool {
-        let context = filter.get_property_context().unwrap();
+    fn filter_texture(
+        &self,
+        filter: &Self::Type,
+        input: &GLMemory,
+        output: &GLMemory,
+    ) -> Result<(), gst::LoggableError> {
+        let context = filter.context().unwrap();
 
         let mut state = self.state.lock().unwrap();
 
@@ -464,6 +468,6 @@ impl GLFilterImpl for GlLcms {
 
         gst::gst_trace!(CAT, obj: filter, "Render finished");
 
-        true
+        self.parent_filter_texture(filter, input, output)
     }
 }
