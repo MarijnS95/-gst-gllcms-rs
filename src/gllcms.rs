@@ -202,12 +202,7 @@ impl ObjectImpl for GlLcms {
         }
     }
 
-    fn get_property(
-        &self,
-        element: &Self::Type,
-        _id: usize,
-        pspec: &glib::ParamSpec,
-    ) -> glib::Value {
+    fn property(&self, element: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         let settings = self.settings.lock().unwrap();
 
         match pspec.name() {
@@ -331,7 +326,7 @@ impl GLFilterImpl for GlLcms {
             let shader = create_shader(filter, &context);
 
             // TODO: Should perhaps use Gst types, even though they appear to implement more complex complex and unnecessary features like automatic CPU mapping/copying
-            let gl = gl::Gl::load_with(|fn_name| context.get_proc_address(fn_name) as _);
+            let gl = gl::Gl::load_with(|fn_name| context.proc_address(fn_name) as _);
 
             let lut_buffer = create_ssbo(&gl);
             gst::gst_trace!(
