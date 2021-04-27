@@ -190,10 +190,10 @@ impl ObjectImpl for GlLcms {
 
         match pspec.name() {
             "icc" => settings.icc = value.get().expect("Type mismatch"),
-            "brightness" => settings.brightness = value.get_some().expect("Type mismatch"),
-            "contrast" => settings.contrast = value.get_some().expect("Type mismatch"),
-            "hue" => settings.hue = value.get_some().expect("Type mismatch"),
-            "saturation" => settings.saturation = value.get_some().expect("Type mismatch"),
+            "brightness" => settings.brightness = value.get().expect("Type mismatch"),
+            "contrast" => settings.contrast = value.get().expect("Type mismatch"),
+            "hue" => settings.hue = value.get().expect("Type mismatch"),
+            "saturation" => settings.saturation = value.get().expect("Type mismatch"),
             _ => {
                 // This means someone added a property to PROPERTIES but forgot to handle it here...
                 gst::gst_error!(CAT, obj: element, "Can't handle {:?}", pspec);
