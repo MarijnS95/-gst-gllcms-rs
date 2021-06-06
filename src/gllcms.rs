@@ -35,7 +35,7 @@ buffer lutTable
 };
 
 void main () {
-    vec4 rgba = texture2D (tex, v_texcoord);
+    vec4 rgba = texture(tex, v_texcoord);
     if (v_texcoord.y > 0.5) {
         fragColor = rgba;
     } else {
