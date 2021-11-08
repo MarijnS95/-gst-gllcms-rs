@@ -218,6 +218,7 @@ impl ObjectImpl for GlLcms {
         }
     }
 }
+impl GstObjectImpl for GlLcms {}
 impl ElementImpl for GlLcms {
     fn metadata() -> Option<&'static ElementMetadata> {
         static ELEMENT_METADATA: Lazy<ElementMetadata> = Lazy::new(|| {
