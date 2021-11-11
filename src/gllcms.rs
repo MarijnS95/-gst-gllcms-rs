@@ -253,7 +253,7 @@ fn create_shader(filter: &super::GlLcms, context: &GLContext) -> GLShader {
         &format!(
             "#version {}",
             &GLSLVersion::profile_to_string(version, profile).unwrap()
-        ) as &str,
+        ),
         VERTEX_SHADER,
     ];
 
@@ -273,7 +273,7 @@ fn create_shader(filter: &super::GlLcms, context: &GLContext) -> GLShader {
         &format!(
             "#version {}",
             &GLSLVersion::profile_to_string(version, profile).unwrap()
-        ) as &str,
+        ),
         FRAGMENT_SHADER,
     ];
 
