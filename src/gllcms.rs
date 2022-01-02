@@ -321,9 +321,7 @@ impl GLFilterImpl for GlLcms {
 
         let mut state = self.state.lock().unwrap();
 
-        let state = if let Some(state) = &mut *state {
-            state
-        } else {
+        let state = state.get_or_insert_with(|| {
             let shader = create_shader(filter, &context);
 
             // TODO: Should perhaps use Gst types, even though they appear to implement more complex complex and unnecessary features like automatic CPU mapping/copying
@@ -337,14 +335,13 @@ impl GLFilterImpl for GlLcms {
                 lut_buffer
             );
 
-            *state = Some(State {
+            State {
                 shader,
                 gl,
                 lut_buffer,
                 current_settings: None,
-            });
-            state.as_mut().unwrap()
-        };
+            }
+        });
 
         // Unpack references to struct members
         let State {
