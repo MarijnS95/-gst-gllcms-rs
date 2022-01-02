@@ -89,14 +89,14 @@ pub struct GlLcms {
 
 static PROPERTIES: Lazy<[glib::ParamSpec; 5]> = Lazy::new(|| {
     [
-        glib::ParamSpec::new_string(
+        glib::ParamSpecString::new(
             "icc",
             "ICC Profile",
             "Path to ICC color profile",
             None,
             glib::ParamFlags::READWRITE,
         ),
-        glib::ParamSpec::new_double(
+        glib::ParamSpecDouble::new(
             "brightness",
             "Bright",
             "Extra brightness correction",
@@ -106,7 +106,7 @@ static PROPERTIES: Lazy<[glib::ParamSpec; 5]> = Lazy::new(|| {
             DEFAULT_BRIGHTNESS,
             glib::ParamFlags::READWRITE,
         ),
-        glib::ParamSpec::new_double(
+        glib::ParamSpecDouble::new(
             "contrast",
             "Contrast",
             "Extra contrast correction",
@@ -116,7 +116,7 @@ static PROPERTIES: Lazy<[glib::ParamSpec; 5]> = Lazy::new(|| {
             DEFAULT_CONTRAST,
             glib::ParamFlags::READWRITE,
         ),
-        glib::ParamSpec::new_double(
+        glib::ParamSpecDouble::new(
             "hue",
             "Hue",
             "Extra hue displacement in degrees",
@@ -125,7 +125,7 @@ static PROPERTIES: Lazy<[glib::ParamSpec; 5]> = Lazy::new(|| {
             DEFAULT_HUE,
             glib::ParamFlags::READWRITE,
         ),
-        glib::ParamSpec::new_double(
+        glib::ParamSpecDouble::new(
             "saturation",
             "Saturation",
             "Extra saturation correction",
