@@ -10,8 +10,8 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -55,12 +55,12 @@ jobs:
           command: build
           args: --release
       - name: Upload plugin
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: GstGLLcms
           path: target/release/libgstgllcms.so
       - name: Upload lock file
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: GstGLLcms-cargo-lock-file
           path: Cargo.lock
