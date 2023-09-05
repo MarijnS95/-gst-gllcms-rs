@@ -24,7 +24,7 @@ jobs:
       - name: Install gstreamer1.0-gl (and transitive dependencies)
         # Need libgstreamer1.0-dev for gstreamer-1.0.pc
         # Need libgstreamer-plugins-base1.0-dev for gstreamer-video-1.0.pc
-        run: sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-gl
+        run: sudo apt install libunwind-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-gl
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
