@@ -53,9 +53,7 @@
     clippy::wildcard_imports
 )]
 
-use gst::glib;
-use gst::subclass::prelude::*;
-use gst_gl::gst;
+use gst_gl::gst::{self, glib, subclass::prelude::*};
 
 gst::plugin_define!(
     gllcms,

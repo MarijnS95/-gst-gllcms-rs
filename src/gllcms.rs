@@ -1,16 +1,14 @@
-use gst::glib;
-use gst::subclass::ElementMetadata;
-use gst_base::subclass::BaseTransformMode;
-use gst_gl::gst_base::subclass::prelude::*;
-use gst_gl::prelude::*;
-use gst_gl::subclass::prelude::*;
-use gst_gl::subclass::GLFilterMode;
-use gst_gl::*;
+use std::{convert::TryInto, sync::Mutex};
 
+use gst_gl::{
+    gst::{glib, subclass::ElementMetadata},
+    gst_base::subclass::{prelude::*, BaseTransformMode},
+    prelude::*,
+    subclass::{prelude::*, GLFilterMode},
+    *,
+};
 use lcms2::*;
 use once_cell::sync::Lazy;
-use std::convert::TryInto;
-use std::sync::Mutex;
 
 // Default vertex shader from gst_gl_shader_string_vertex_default
 const VERTEX_SHADER: &str = r#"
@@ -89,52 +87,41 @@ pub struct GlLcms {
 
 static PROPERTIES: Lazy<[glib::ParamSpec; 5]> = Lazy::new(|| {
     [
-        glib::ParamSpecString::new(
-            "icc",
-            "ICC Profile",
-            "Path to ICC color profile",
-            None,
-            glib::ParamFlags::READWRITE,
-        ),
-        glib::ParamSpecDouble::new(
-            "brightness",
-            "Bright",
-            "Extra brightness correction",
+        glib::ParamSpecString::builder("icc")
+            .nick("ICC Profile")
+            .blurb("Path to ICC color profile")
+            .build(),
+        glib::ParamSpecDouble::builder("brightness")
+            .nick("Bright")
+            .blurb("Extra brightness correction")
             // TODO: Docs don't clarify min and max!
-            f64::MIN,
-            f64::MAX,
-            DEFAULT_BRIGHTNESS,
-            glib::ParamFlags::READWRITE,
-        ),
-        glib::ParamSpecDouble::new(
-            "contrast",
-            "Contrast",
-            "Extra contrast correction",
+            .minimum(f64::MIN)
+            .maximum(f64::MAX)
+            .default_value(DEFAULT_BRIGHTNESS)
+            .build(),
+        glib::ParamSpecDouble::builder("contrast")
+            .nick("Contrast")
+            .blurb("Extra contrast correction")
             // TODO: Docs don't clarify min and max!
-            f64::MIN,
-            f64::MAX,
-            DEFAULT_CONTRAST,
-            glib::ParamFlags::READWRITE,
-        ),
-        glib::ParamSpecDouble::new(
-            "hue",
-            "Hue",
-            "Extra hue displacement in degrees",
-            0f64,
-            360f64,
-            DEFAULT_HUE,
-            glib::ParamFlags::READWRITE,
-        ),
-        glib::ParamSpecDouble::new(
-            "saturation",
-            "Saturation",
-            "Extra saturation correction",
+            .minimum(f64::MIN)
+            .maximum(f64::MAX)
+            .default_value(DEFAULT_CONTRAST)
+            .build(),
+        glib::ParamSpecDouble::builder("hue")
+            .nick("Hue")
+            .blurb("Extra hue displacement in degrees")
+            .minimum(0f64)
+            .maximum(360f64)
+            .default_value(DEFAULT_HUE)
+            .build(),
+        glib::ParamSpecDouble::builder("saturation")
+            .nick("Saturation")
+            .blurb("Extra saturation correction")
             // TODO: Docs don't clarify min and max!
-            f64::MIN,
-            f64::MAX,
-            DEFAULT_SATURATION,
-            glib::ParamFlags::READWRITE,
-        ),
+            .minimum(f64::MIN)
+            .maximum(f64::MAX)
+            .default_value(DEFAULT_SATURATION)
+            .build(),
         // TODO: Model white balance src+dest as structure
         // glib::ParamSpec::new_value_array(
         //     "temp",
@@ -175,13 +162,8 @@ impl ObjectImpl for GlLcms {
         PROPERTIES.as_ref()
     }
 
-    fn set_property(
-        &self,
-        element: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
+        let element = self.obj();
         // assert_eq!(pspec, PROPERTIES[id]);
 
         gst::info!(CAT, obj: element, "Changing {:?} to {:?}", pspec, value);
@@ -202,7 +184,8 @@ impl ObjectImpl for GlLcms {
         }
     }
 
-    fn property(&self, element: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        let element = self.obj();
         let settings = self.settings.lock().unwrap();
 
         match pspec.name() {
@@ -313,16 +296,17 @@ impl GLFilterImpl for GlLcms {
 
     fn filter_texture(
         &self,
-        filter: &Self::Type,
         input: &GLMemory,
         output: &GLMemory,
     ) -> Result<(), gst::LoggableError> {
+        let filter = self.obj();
+
         let context = filter.context().unwrap();
 
         let mut state = self.state.lock().unwrap();
 
         let state = state.get_or_insert_with(|| {
-            let shader = create_shader(filter, &context);
+            let shader = create_shader(filter.as_ref(), &context);
 
             // TODO: Should perhaps use Gst types, even though they appear to implement more complex complex and unnecessary features like automatic CPU mapping/copying
             let gl = gl::Gl::load_with(|fn_name| context.proc_address(fn_name) as _);
@@ -461,6 +445,6 @@ impl GLFilterImpl for GlLcms {
 
         gst::trace!(CAT, obj: filter, "Render finished");
 
-        self.parent_filter_texture(filter, input, output)
+        self.parent_filter_texture(input, output)
     }
 }
