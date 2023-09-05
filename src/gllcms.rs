@@ -163,10 +163,9 @@ impl ObjectImpl for GlLcms {
     }
 
     fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        let element = self.obj();
         // assert_eq!(pspec, PROPERTIES[id]);
 
-        gst::info!(CAT, obj: element, "Changing {:?} to {:?}", pspec, value);
+        gst::info!(CAT, imp: self, "Changing {:?} to {:?}", pspec, value);
 
         let mut settings = self.settings.lock().unwrap();
 
@@ -178,14 +177,13 @@ impl ObjectImpl for GlLcms {
             "saturation" => settings.saturation = value.get().expect("Type mismatch"),
             _ => {
                 // This means someone added a property to PROPERTIES but forgot to handle it here...
-                gst::error!(CAT, obj: element, "Can't handle {:?}", pspec);
+                gst::error!(CAT, imp: self, "Can't handle {:?}", pspec);
                 panic!("set_property unhandled for {:?}", pspec);
             }
         }
     }
 
     fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        let element = self.obj();
         let settings = self.settings.lock().unwrap();
 
         match pspec.name() {
@@ -195,7 +193,7 @@ impl ObjectImpl for GlLcms {
             "hue" => settings.hue.to_value(),
             "saturation" => settings.saturation.to_value(),
             _ => {
-                gst::error!(CAT, obj: element, "Can't handle {:?}", pspec);
+                gst::error!(CAT, imp: self, "Can't handle {:?}", pspec);
                 panic!("get_property unhandled for {:?}", pspec);
             }
         }
@@ -223,7 +221,7 @@ impl BaseTransformImpl for GlLcms {
 }
 impl GLBaseFilterImpl for GlLcms {}
 
-fn create_shader(filter: &super::GlLcms, context: &GLContext) -> GLShader {
+fn create_shader(imp: &GlLcms, context: &GLContext) -> GLShader {
     let shader = GLShader::new(context);
     // 400 For (un)packUnorm
     // 430 for SSBO (https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object)
@@ -242,7 +240,7 @@ fn create_shader(filter: &super::GlLcms, context: &GLContext) -> GLShader {
 
     gst::debug!(
         CAT,
-        obj: filter,
+        imp: imp,
         "Compiling vertex shader parts {:?}",
         &shader_parts
     );
@@ -262,7 +260,7 @@ fn create_shader(filter: &super::GlLcms, context: &GLContext) -> GLShader {
 
     gst::debug!(
         CAT,
-        obj: filter,
+        imp: imp,
         "Compiling fragment shader parts {:?}",
         &shader_parts
     );
@@ -278,7 +276,7 @@ fn create_shader(filter: &super::GlLcms, context: &GLContext) -> GLShader {
     shader.attach_unlocked(&fragment).unwrap();
     shader.link().unwrap();
 
-    gst::debug!(CAT, obj: filter, "Successfully linked {:?}", shader);
+    gst::debug!(CAT, imp: imp, "Successfully linked {:?}", shader);
 
     shader
 }
@@ -306,7 +304,7 @@ impl GLFilterImpl for GlLcms {
         let mut state = self.state.lock().unwrap();
 
         let state = state.get_or_insert_with(|| {
-            let shader = create_shader(filter.as_ref(), &context);
+            let shader = create_shader(self, &context);
 
             // TODO: Should perhaps use Gst types, even though they appear to implement more complex complex and unnecessary features like automatic CPU mapping/copying
             let gl = gl::Gl::load_with(|fn_name| context.proc_address(fn_name) as _);
@@ -314,7 +312,7 @@ impl GLFilterImpl for GlLcms {
             let lut_buffer = create_ssbo(&gl);
             gst::trace!(
                 CAT,
-                obj: filter,
+                imp: self,
                 "Created SSBO containing lut at {:?}",
                 lut_buffer
             );
@@ -338,12 +336,12 @@ impl GLFilterImpl for GlLcms {
 
         let settings = &*self.settings.lock().unwrap();
         if current_settings.as_ref() != Some(settings) {
-            gst::trace!(CAT, obj: filter, "Settings changed, updating LUT");
+            gst::trace!(CAT, imp: self, "Settings changed, updating LUT");
 
             if settings == &Default::default() {
                 gst::warning!(
                     CAT,
-                    obj: filter,
+                    imp: self,
                     "gllcms without options does nothing, performing mem -> mem copy"
                 );
 
@@ -351,7 +349,7 @@ impl GLFilterImpl for GlLcms {
                 // return true;
             }
 
-            gst::info!(CAT, obj: filter, "Creating LUT from {:?}", settings);
+            gst::info!(CAT, imp: self, "Creating LUT from {:?}", settings);
 
             let mut profiles = vec![];
 
@@ -443,7 +441,7 @@ impl GLFilterImpl for GlLcms {
         // Cleanup
         unsafe { gl.BindBuffer(gl::SHADER_STORAGE_BUFFER, 0) };
 
-        gst::trace!(CAT, obj: filter, "Render finished");
+        gst::trace!(CAT, imp: self, "Render finished");
 
         self.parent_filter_texture(input, output)
     }

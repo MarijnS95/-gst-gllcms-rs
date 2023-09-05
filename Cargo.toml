@@ -10,8 +10,8 @@ description = "Transform GL textures using ICC profiles"
 [dependencies]
 gl = { package = "gfx_gl", version = "0.6" }
 gst_gl = { package = "gstreamer-gl", git = "https://gitlab.freedesktop.org/gstreamer/gstreamer-rs.git", branch = "main" }
-lcms2 = "5.4"
-once_cell = "1.5"
+lcms2 = "6"
+once_cell = "1"
 
 [lib]
 name = "gstgllcms"
