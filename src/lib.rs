@@ -46,6 +46,7 @@
     clippy::default_trait_access,
     clippy::semicolon_if_nothing_returned,
     clippy::shadow_unrelated,
+    clippy::significant_drop_tightening,
     clippy::todo,
     clippy::too_many_lines,
     clippy::unimplemented,

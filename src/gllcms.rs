@@ -199,7 +199,9 @@ impl ObjectImpl for GlLcms {
         }
     }
 }
+
 impl GstObjectImpl for GlLcms {}
+
 impl ElementImpl for GlLcms {
     fn metadata() -> Option<&'static ElementMetadata> {
         static ELEMENT_METADATA: Lazy<ElementMetadata> = Lazy::new(|| {
@@ -214,12 +216,12 @@ impl ElementImpl for GlLcms {
         Some(&*ELEMENT_METADATA)
     }
 }
+
 impl BaseTransformImpl for GlLcms {
     const MODE: BaseTransformMode = BaseTransformMode::NeverInPlace;
     const PASSTHROUGH_ON_SAME_CAPS: bool = false;
     const TRANSFORM_IP_ON_PASSTHROUGH: bool = false;
 }
-impl GLBaseFilterImpl for GlLcms {}
 
 fn create_shader(imp: &GlLcms, context: &GLContext) -> GLShader {
     let shader = GLShader::new(context);
@@ -227,16 +229,14 @@ fn create_shader(imp: &GlLcms, context: &GLContext) -> GLShader {
     // 430 for SSBO (https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object)
     let version = GLSLVersion::_430;
     let profile = GLSLProfile::empty();
+    let shader_version = format!(
+        "#version {}",
+        &GLSLVersion::profile_to_string(version, profile).unwrap()
+    );
 
     // let vertex = GLSLStage::new_default_vertex(context);
     // new_default_vertex assumes GLSLVersion::None and ES | COMPATIBILITY profile
-    let shader_parts = [
-        &format!(
-            "#version {}",
-            &GLSLVersion::profile_to_string(version, profile).unwrap()
-        ),
-        VERTEX_SHADER,
-    ];
+    let shader_parts = [&shader_version, VERTEX_SHADER];
 
     gst::debug!(
         CAT,
@@ -250,13 +250,7 @@ fn create_shader(imp: &GlLcms, context: &GLContext) -> GLShader {
     vertex.compile().unwrap();
     shader.attach_unlocked(&vertex).unwrap();
 
-    let shader_parts = [
-        &format!(
-            "#version {}",
-            &GLSLVersion::profile_to_string(version, profile).unwrap()
-        ),
-        FRAGMENT_SHADER,
-    ];
+    let shader_parts = [&shader_version, FRAGMENT_SHADER];
 
     gst::debug!(
         CAT,
@@ -289,6 +283,55 @@ fn create_ssbo(gl: &gl::Gl) -> u32 {
     }
 }
 
+impl GLBaseFilterImpl for GlLcms {
+    fn gl_start(&self) -> Result<(), gst::LoggableError> {
+        gst::debug!(CAT, imp: self, "gl_start");
+
+        let obj = self.obj();
+        let context = obj.context().unwrap();
+        let mut state = self.state.lock().unwrap();
+
+        let shader = create_shader(self, &context);
+
+        // TODO: Should perhaps use Gst types, even though they appear to implement more complex and unnecessary features like automatic CPU mapping/copying
+        let gl = gl::Gl::load_with(|fn_name| context.proc_address(fn_name) as _);
+
+        let lut_buffer = create_ssbo(&gl);
+
+        gst::trace!(
+            CAT,
+            imp: self,
+            "Created SSBO containing lut at {lut_buffer:?}"
+        );
+
+        let was_uninitialized = state
+            .replace(State {
+                shader,
+                gl,
+                lut_buffer,
+                current_settings: None,
+            })
+            .is_none();
+        assert!(
+            was_uninitialized,
+            "State mut not have already been initialized when calling gl_stop()"
+        );
+
+        self.parent_gl_start()
+    }
+
+    fn gl_stop(&self) {
+        gst::debug!(CAT, imp: self, "gl_stop");
+
+        let mut state = self.state.lock().unwrap();
+        let _ = state
+            .take()
+            .expect("State must have been initialized when calling gl_stop()");
+
+        self.parent_gl_stop()
+    }
+}
+
 impl GLFilterImpl for GlLcms {
     const MODE: GLFilterMode = GLFilterMode::Texture;
 
@@ -297,33 +340,11 @@ impl GLFilterImpl for GlLcms {
         input: &GLMemory,
         output: &GLMemory,
     ) -> Result<(), gst::LoggableError> {
-        let filter = self.obj();
-
-        let context = filter.context().unwrap();
-
+        let obj = self.obj();
         let mut state = self.state.lock().unwrap();
-
-        let state = state.get_or_insert_with(|| {
-            let shader = create_shader(self, &context);
-
-            // TODO: Should perhaps use Gst types, even though they appear to implement more complex complex and unnecessary features like automatic CPU mapping/copying
-            let gl = gl::Gl::load_with(|fn_name| context.proc_address(fn_name) as _);
-
-            let lut_buffer = create_ssbo(&gl);
-            gst::trace!(
-                CAT,
-                imp: self,
-                "Created SSBO containing lut at {:?}",
-                lut_buffer
-            );
-
-            State {
-                shader,
-                gl,
-                lut_buffer,
-                current_settings: None,
-            }
-        });
+        let state = state
+            .as_mut()
+            .expect("Should not be calling filter_texture() before gl_start() or after gl_stop()");
 
         // Unpack references to struct members
         let State {
@@ -344,6 +365,8 @@ impl GLFilterImpl for GlLcms {
                     imp: self,
                     "gllcms without options does nothing, performing mem -> mem copy"
                 );
+
+                // unsafe { input.memcpy(&mut output, output.offset(), output.size()) };
 
                 todo!("Implement memcpy");
                 // return true;
@@ -436,7 +459,7 @@ impl GLFilterImpl for GlLcms {
             )
         };
 
-        filter.render_to_target_with_shader(input, output, shader);
+        obj.render_to_target_with_shader(input, output, shader);
 
         // Cleanup
         unsafe { gl.BindBuffer(gl::SHADER_STORAGE_BUFFER, 0) };
