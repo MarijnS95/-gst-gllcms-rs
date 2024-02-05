@@ -79,7 +79,7 @@ fn plugin_init(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
     gst::Element::register(
         Some(plugin),
         gllcms::GlLcms::NAME,
-        gst::Rank::None,
+        gst::Rank::NONE,
         gllcms::GlLcms::type_(),
     )
 }

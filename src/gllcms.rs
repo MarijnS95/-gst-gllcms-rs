@@ -11,7 +11,7 @@ use lcms2::*;
 use once_cell::sync::Lazy;
 
 // Default vertex shader from gst_gl_shader_string_vertex_default
-const VERTEX_SHADER: &str = r#"
+const VERTEX_SHADER: &str = r"
 in vec4 a_position;
 in vec2 a_texcoord;
 out vec2 v_texcoord;
@@ -19,9 +19,9 @@ void main()
 {
    gl_Position = a_position;
    v_texcoord = a_texcoord;
-}"#;
+}";
 
-const FRAGMENT_SHADER: &str = r#"
+const FRAGMENT_SHADER: &str = r"
 in vec2 v_texcoord;
 out vec4 fragColor;
 
@@ -43,7 +43,7 @@ void main () {
         fragColor = vec4(rgb, 1);
     }
 }
-"#;
+";
 
 const DEFAULT_BRIGHTNESS: f64 = 0f64;
 const DEFAULT_CONTRAST: f64 = 1f64;
